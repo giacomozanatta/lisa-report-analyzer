@@ -33,7 +33,7 @@ class LiSACFGAnalyzer {
         this.setupSVG();
         this.checkURLParameters();
         // Load sequential sample on startup
-        setTimeout(() => this.loadSequentialSample(), 100);
+        //setTimeout(() => this.loadSequentialSample(), 100);
     }
 
     setupEventListeners() {
@@ -216,13 +216,14 @@ class LiSACFGAnalyzer {
     }
 
     checkURLParameters() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const jsonData = urlParams.get('data');
-        
-        if (jsonData) {
+        const hash = window.location.hash.slice(1);
+        const params = new URLSearchParams(hash);
+        const compressed = params.get('data'); 
+
+        if (compressed) {
             try {
-                const decodedData = atob(jsonData);
-                const parsedData = JSON.parse(decodedData);
+                // safer: handle compressed/encoded data
+                const parsedData = JSON.parse(LZString.decompressFromEncodedURIComponent(compressed));
                 const jsonInput = document.getElementById('jsonInput');
                 if (jsonInput) {
                     jsonInput.value = JSON.stringify(parsedData, null, 2);
@@ -925,15 +926,18 @@ class LiSACFGAnalyzer {
             this.showError('No data to share. Please visualize a CFG first.');
             return;
         }
-        
+
         try {
+            // Stringify + compress
             const jsonString = JSON.stringify(this.currentData);
-            const encodedData = btoa(jsonString);
-            const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
-            
+            const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(this.currentData));
+
+            // Use #data= instead of ?data=
+            const shareUrl = `${window.location.origin}${window.location.pathname}#data=${compressed}`;
+
             const shareUrlInput = document.getElementById('shareUrl');
             const shareModal = document.getElementById('shareModal');
-            
+
             if (shareUrlInput && shareModal) {
                 shareUrlInput.value = shareUrl;
                 shareModal.classList.remove('hidden');
